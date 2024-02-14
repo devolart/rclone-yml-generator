@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rclone Job Workflow Generator</title>
+  <link rel="shortcut icon" type="image/png" href="https://rclone.org/img/rclone-32x32.png"/>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <style>
+    .clickable {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4">Rclone Job Workflow Generator</h1>
+    <form id="workflowForm">
+      <h3 class="mb-4">General</h3>
+      <div class="form-group">
+        <label for="source">Source Remote:</label>
+        <input type="text" class="form-control" id="source" name="source" placeholder="remote1:some folder" required>
+      </div>
+      <div class="form-group">
+        <label for="destination">Destination Remote:</label>
+        <input type="text" class="form-control" id="destination" name="destination" placeholder="remote2:another folder" required>
+      </div>
+      <div class="form-group form-check">
+        <input type="checkbox" class="form-check-input" id="activateSchedule" onchange="toggleSchedule()">
+        <label class="form-check-label" for="activateSchedule">Activate Schedule</label>
+      </div>
+      <div class="form-group">
+        <label for="schedule">Schedule (cron format):</label>
+        <input type="text" class="form-control" id="schedule" name="schedule" placeholder="empty means disabled" disabled>
+      </div>
+      <div class="form-group">
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 */12 * * *')" disabled>12 hours (default)</button>
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 * * *')" disabled>24 hours</button>
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 */2 * *')" disabled>2 days</button>
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 */5 * *')" disabled>5 days</button>
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 * * 0')" disabled>A week</button>
+        <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 1 * *')" disabled>A month</button>
+      </div>
+      <div class="form-group">
+        <label for="action">Action:</label>
+        <select class="form-control" id="action" name="action">
+          <option value="copy">Copy</option>
+          <option value="sync">Sync</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="verbosity">Verbosity:</label>
+        <select class="form-control" id="verbosity" name="verbosity">
+          <option value="">Default</option>
+          <option value="--progress">Show progress</option>
+          <option value="--quiet">Quiet (show information as little as possible)</option>
+          <option value="--verbose">Show verbose</option>
+        </select>
+      </div>
+      <h3 class="mb-4 clickable" data-toggle="collapse" data-target="#advanced" aria-expanded="false" aria-controls="advanced">Advanced (click to open)</h3>
+      <div class="collapse" id="advanced">
+      <p><b>Please keep these empty if you don't know what these inputs do!</b></p>
+      <div class="form-group">
+        <label for="transfers">Transfers:</label>
+        <input type="number" class="form-control" id="transfers" name="transfers" placeholder="Number of file transfers to run in parallel (default 4 if empty)">
+      </div>
+      <div class="form-group">
+        <label for="transfers">Checkers:</label>
+        <input type="number" class="form-control" id="checkers" name="checkers" placeholder="Number of checkers to run in parallel (default 8 if empty)">
+      </div>
+      <div class="form-group">
+        <label for="buffer">Buffer size:</label>
+        <input type="text" class="form-control" id="buffer" name="buffer" placeholder="In memory buffer size when reading files for each --transfer (default 16Mi if empty)">
+      </div>
+      </div>
+      <div class="submit">
+        <button type="button" class="btn btn-primary" onclick="generateYAML()">Generate YML</button>
+      </div>
+      <div class="form-group mt-3">
+        <textarea class="form-control" id="yamlOutput" rows="10" readonly></textarea>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="copyYAML()">Copy YML</button>
+    </form>
+  </div>
+  <footer class="footer mt-auto py-3">
+    <div class="container">
+      <span class="text-muted">Copyright &copy; <a href="https://t.me/tearflakes">Tearflakes</a> 2024</span>
+    </div>
+  </footer>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script>
+    function generateYAML() {
+      var source = document.getElementById("source").value;
+      var destination = document.getElementById("destination").value;
+      var schedule = document.getElementById("schedule").value;
+      var action = document.getElementById("action").value;
+      var verbosity = document.getElementById("verbosity").value;
+      var transfers = document.getElementById("transfers").value;
+      var checkers = document.getElementById("checkers").value;
+      var buffer = document.getElementById("buffer").value;
+
+      if (source.trim() === "" || destination.trim() === "") {
+        alert("Source and destination fields cannot be empty!");
+        return;
+      }
+
+      var yaml = `name: Rclone\n\non:\n`;
+
+      if (schedule !== "") {
+        yaml += `  schedule:\n    - cron: "${schedule}"\n`;
+      }
+      yaml += `  workflow_dispatch:\n`;
+      yaml += `\njobs:\n  rclone:\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v2\n\n      - name: Install rclone\n        run: |\n          curl https://rclone.org/install.sh | sudo bash\n\n`;
+      yaml += `      - name: Configure Rclone\n        run: |\n          echo "`;
+      yaml += "${{ secrets.RCLONE_CONFIG }}";
+      yaml += `" > rclone.conf\n\n      - name: Run Rclone job\n        run: |\n          rclone ${action} "${source}" "${destination}" --config rclone.conf`;
+      if (verbosity !== "") {
+        yaml += ` ${verbosity}`;
+      }
+      if (transfers !== "") {
+        yaml += ` --transfers ${transfers}`;
+      }
+      if (checkers !== "") {
+        yaml += ` --checkers ${checkers}`;
+      }
+      if (buffer !== "") {
+        yaml += ` --buffer-size ${buffer}`;
+      }
+
+      document.getElementById("yamlOutput").value = yaml;
+    }
+
+    function toggleSchedule() {
+      var scheduleInput = document.getElementById("schedule");
+      var activateScheduleCheckbox = document.getElementById("activateSchedule");
+
+      scheduleInput.disabled = !activateScheduleCheckbox.checked;
+      
+      if (activateScheduleCheckbox.checked) {
+        setSchedule('0 */12 * * *');
+      } else {
+        scheduleInput.value = "";
+      }
+
+      var cronButtons = document.querySelectorAll("#workflowForm button[id='cron']");
+      cronButtons.forEach(function(button) {
+        button.disabled = !activateScheduleCheckbox.checked;
+      });
+    }
+
+    function setSchedule(cron) {
+      document.getElementById("schedule").value = cron;
+    }
+
+    function copyYAML() {
+      var yamlOutput = document.getElementById("yamlOutput");
+      yamlOutput.select();
+      document.execCommand("copy");
+      alert("YML copied to clipboard!");
+    }
+
+    $(document).ready(function(){
+    $(".clickable").click(function(){
+      $(this).toggleClass("clicked");
+    });
+  });
+  </script>
+</body>
+</html>
