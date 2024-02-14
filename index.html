@@ -19,6 +19,16 @@
     <h1 class="mb-4">Rclone Job Workflow Generator</h1>
     <form id="workflowForm">
       <h3 class="mb-4">General</h3>
+     <div class="form-group">
+        <label for="action">Action:</label>
+        <select class="form-control" id="action" name="action">
+          <option value="copy">Copy</option>
+          <option value="sync">Sync</option>
+          <option value="move">Move</option>
+          <option value="check">Check</option>
+          <option value="copyurl">Copy URL</option>
+        </select>
+      </div>
       <div class="form-group">
         <label for="source">Source Remote:</label>
         <input type="text" class="form-control" id="source" name="source" placeholder="remote1:some folder" required>
@@ -29,7 +39,7 @@
       </div>
       <div class="form-group form-check">
         <input type="checkbox" class="form-check-input" id="activateSchedule" onchange="toggleSchedule()">
-        <label class="form-check-label" for="activateSchedule">Activate Schedule</label>
+        <label class="form-check-label" for="activateSchedule">Activate Schedule (optional)</label>
       </div>
       <div class="form-group">
         <label for="schedule">Schedule (cron format):</label>
@@ -44,13 +54,6 @@
         <button class="btn btn-primary" type="button" id="cron" onclick="setSchedule('0 0 1 * *')" disabled>A month</button>
       </div>
       <div class="form-group">
-        <label for="action">Action:</label>
-        <select class="form-control" id="action" name="action">
-          <option value="copy">Copy</option>
-          <option value="sync">Sync</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label for="verbosity">Verbosity:</label>
         <select class="form-control" id="verbosity" name="verbosity">
           <option value="">Default</option>
@@ -63,15 +66,15 @@
       <div class="collapse" id="advanced">
       <p><b>Please keep these empty if you don't know what these inputs do!</b></p>
       <div class="form-group">
-        <label for="transfers">Transfers:</label>
+        <label for="transfers">Transfers: (optional)</label>
         <input type="number" class="form-control" id="transfers" name="transfers" placeholder="Number of file transfers to run in parallel (default 4 if empty)">
       </div>
       <div class="form-group">
-        <label for="transfers">Checkers:</label>
+        <label for="transfers">Checkers: (optional)</label>
         <input type="number" class="form-control" id="checkers" name="checkers" placeholder="Number of checkers to run in parallel (default 8 if empty)">
       </div>
       <div class="form-group">
-        <label for="buffer">Buffer size:</label>
+        <label for="buffer">Buffer size: (optional)</label>
         <input type="text" class="form-control" id="buffer" name="buffer" placeholder="In memory buffer size when reading files for each --transfer (default 16Mi if empty)">
       </div>
       </div>
