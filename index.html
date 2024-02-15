@@ -120,9 +120,9 @@
       }
       yaml += `  workflow_dispatch:\n`;
       yaml += `\njobs:\n  rclone:\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v2\n\n      - name: Install rclone\n        run: |\n          curl https://rclone.org/install.sh | sudo bash\n\n`;
-      yaml += `      - name: Configure Rclone\n        run: |\n          echo "`;
+      yaml += `      - name: Configure Rclone\n        run: |\n          echo '`;
       yaml += "${{ secrets.RCLONE_CONFIG }}";
-      yaml += `" > rclone.conf\n\n      - name: Run Rclone job\n        run: |\n          rclone ${action} "${source}" "${destination}" --config rclone.conf`;
+      yaml += `' > rclone.conf\n\n      - name: Run Rclone job\n        run: |\n          rclone ${action} "${source}" "${destination}" --config rclone.conf`;
       if (verbosity !== "") {
         yaml += ` ${verbosity}`;
       }
